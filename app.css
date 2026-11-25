@@ -1,0 +1,134 @@
+:root{
+  --bg:#f6f4ef; --card:#ffffff; --fg:#24221f; --muted:#6b665e; --line:#e2ddd3; --btn:#f1ede6;
+  --sel:#2f6fed; --primary:#2f6fed; --primaryFg:#fff; --shadow:0 2px 10px rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#17171a; --card:#222226; --fg:#ebe8e2; --muted:#a39d93; --line:#3a3936; --btn:#2c2c30; --sel:#6d9bff; --primary:#4b7cf0; --shadow:0 2px 10px rgba(0,0,0,.4); }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+  font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-text-size-adjust:100%}
+body{overflow:hidden}
+.screen{height:100%;display:flex;flex-direction:column}
+.screen[hidden]{display:none}
+button,.btn,select{font:inherit;font-size:14px;min-height:36px;padding:6px 11px;border:1px solid var(--line);border-radius:9px;
+  background:var(--btn);color:var(--fg);cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+button:disabled{opacity:.4;cursor:default}
+button.primary,.btn.primary{background:var(--primary);color:var(--primaryFg);border-color:var(--primary)}
+button.icon{min-width:36px;justify-content:center;padding:6px}
+button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+select{padding-right:6px;max-width:170px}
+.muted{color:var(--muted)}
+kbd{font:inherit;font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--btn)}
+
+/* ---- 첫 화면 ---- */
+#home{overflow-y:auto}
+.home-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:14px max(16px,env(safe-area-inset-left)) 12px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}
+.brand{display:flex;align-items:center;gap:10px;font-size:20px}
+.brand img{width:34px;height:34px;border-radius:9px}
+.home-actions{display:flex;gap:8px}
+.home-body{padding:6px 16px 40px;max-width:1200px;margin:0 auto;width:100%}
+.home-body h2{font-size:17px;margin:22px 0 10px}
+.foot{font-size:13px;margin-top:28px;line-height:1.6}
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.tpl-grid.small{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;box-shadow:var(--shadow);display:flex;flex-direction:column;text-align:left;padding:0;min-height:0;color:var(--fg)}
+.card:hover{border-color:var(--sel)}
+.card .thumb{height:130px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--line)}
+.tpl-grid.small .card .thumb{height:96px}
+.card .thumb svg{width:100%;height:100%}
+.card .meta{padding:9px 12px 11px;display:flex;flex-direction:column;gap:2px;width:100%}
+.card .meta b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .meta span{font-size:12.5px;color:var(--muted);white-space:normal}
+.card .row{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.card .more{min-height:28px;padding:2px 8px;font-size:13px}
+
+/* ---- 마인드맵 화면 ---- */
+.top{display:flex;align-items:center;gap:6px;padding:8px max(10px,env(safe-area-inset-left));background:var(--card);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.title{flex:1 1 160px;min-width:120px;font:inherit;font-size:16px;font-weight:700;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--fg)}
+.title:hover,.title:focus{border-color:var(--line);outline:none;background:var(--bg)}
+.seg{display:inline-flex}
+.seg button{border-radius:0}
+.seg button:first-child{border-radius:9px 0 0 9px}
+.seg button:last-child{border-radius:0 9px 9px 0;border-left:0}
+#status{font-size:12.5px;min-width:60px}
+.menu{position:relative}
+.menu-pop{position:absolute;right:0;top:calc(100% + 4px);background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:6px;display:flex;flex-direction:column;gap:4px;z-index:20;min-width:220px}
+.menu-pop[hidden]{display:none}
+.menu-pop button{justify-content:flex-start;background:transparent;border-color:transparent}
+.menu-pop button:hover{background:var(--btn)}
+.tools{display:flex;gap:5px;align-items:center;padding:6px 10px;background:var(--card);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tools .sep{width:1px;height:24px;background:var(--line);margin:0 3px}
+.hint{font-size:12.5px;color:var(--muted);padding:5px 12px;background:var(--card);border-bottom:1px solid var(--line);line-height:1.7}
+.work{flex:1;min-height:0;display:flex;position:relative}
+#stage{position:relative;flex:1;min-width:0;overflow:hidden}
+#svg{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#svg.panning{cursor:grabbing}
+#svg [data-act=node]{cursor:text}
+#svg [data-act=toggle],#svg [data-act=add],#svg [data-act=note]{cursor:pointer}
+#view.anim{transition:transform .55s ease}
+#edit{position:absolute;display:none;resize:none;overflow:hidden;border:2px solid var(--sel);border-radius:8px;margin:0;outline:none;
+  background:#fff;color:#222;line-height:1.35;font-family:inherit;box-shadow:0 3px 14px rgba(0,0,0,.18);z-index:5}
+#ghost{position:absolute;pointer-events:none;background:var(--sel);color:#fff;padding:5px 10px;border-radius:8px;font-size:14px;opacity:.9;z-index:6;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#presentBar{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 10px;box-shadow:var(--shadow);z-index:7}
+#presentBar button{min-width:44px;min-height:44px;justify-content:center}
+#presentBar[hidden],#ghost[hidden],#outline[hidden],#stage[hidden]{display:none}
+#pCount{min-width:56px;text-align:center;font-size:14px}
+
+/* 목록 보기 */
+#outline{flex:1;overflow:auto;padding:16px 16px 120px;background:var(--bg)}
+#outline .orow{display:flex;align-items:center;gap:4px;margin:1px 0}
+#outline .ofold{min-height:28px;min-width:28px;padding:0;justify-content:center;border:0;background:transparent;color:var(--muted)}
+#outline input{flex:1;max-width:720px;font:inherit;font-size:16px;padding:6px 8px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--fg)}
+#outline input:focus{outline:none;border-color:var(--sel);background:var(--card)}
+#outline .d0 input{font-size:20px;font-weight:700}
+#outline .d1 input{font-weight:600}
+#outline .dot{width:9px;height:9px;border-radius:50%;flex:none}
+#outline .ohelp{font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.7}
+
+/* 꾸미기 판 */
+#panel{width:290px;flex:none;border-left:1px solid var(--line);background:var(--card);overflow-y:auto;padding:10px 14px 24px}
+#panel[hidden]{display:none}
+.panel-head{display:flex;align-items:center;gap:8px;position:sticky;top:-10px;background:var(--card);padding:6px 0;z-index:1}
+.panel-head b{font-size:16px}
+.panel-head #pTarget{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#panel h4{margin:14px 0 6px;font-size:13.5px;color:var(--muted)}
+.swatches{display:flex;flex-wrap:wrap;gap:6px}
+.swatches button{width:30px;height:30px;min-height:30px;padding:0;border-radius:50%;border:2px solid var(--card);box-shadow:0 0 0 1px var(--line)}
+.swatches button.on{box-shadow:0 0 0 2px var(--sel)}
+.swatches button.auto{background:conic-gradient(#e8590c,#2f9e44,#1971c2,#9c36b5,#e8590c);font-size:0}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{min-height:32px;padding:4px 9px;font-size:13px}
+.icons{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+.icons button{min-height:32px;padding:0;justify-content:center;font-size:17px;background:transparent;border-color:transparent}
+.icons button.on{border-color:var(--sel);background:var(--btn);color:var(--fg)}
+#pNote{width:100%;font:inherit;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);resize:vertical}
+#panel .row{display:flex;gap:6px}
+
+/* 발표 중 */
+body.presenting .top,body.presenting .tools,body.presenting .hint,body.presenting #panel{display:none}
+
+dialog{border:0;border-radius:16px;padding:0;width:min(920px,94vw);max-height:88vh;background:var(--bg);color:var(--fg);box-shadow:0 10px 40px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1}
+#tplGrid{padding:16px;overflow:auto}
+#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#2b2a28;color:#fff;padding:9px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:50;max-width:90vw;text-align:center}
+
+/* ---- 휴대폰 ---- */
+@media (max-width:760px){
+  .hint,.hide-sm,#status{display:none}
+  .top{gap:5px;padding:6px 8px}
+  .title{order:1;flex:1 1 calc(100% - 50px)}
+  #bBack{order:0}
+  .top select,.top .seg,.top #bFocus,.top #bPresent,.top .menu{order:2}
+  .top select{max-width:none;flex:1 1 40%}
+  .tools{order:9;position:fixed;left:0;right:0;bottom:0;z-index:8;flex-wrap:nowrap;gap:3px;padding:6px 4px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--line);border-bottom:0;box-shadow:0 -2px 10px rgba(0,0,0,.08)}
+  .tools button{flex:1 1 0;min-width:0;min-height:46px;padding:3px 2px;font-size:12.5px;line-height:1.2;white-space:normal;word-break:keep-all;justify-content:center;text-align:center}
+  #tRedo{display:none}
+  .tools .sep{display:none}
+  .work{padding-bottom:calc(58px + env(safe-area-inset-bottom))}
+  #panel{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));width:auto;max-height:52vh;border-left:0;border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -6px 20px rgba(0,0,0,.18);z-index:9}
+  .icons{grid-template-columns:repeat(10,1fr)}
+  .menu-pop{right:auto;left:0}
+}

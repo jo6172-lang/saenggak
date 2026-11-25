@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b2a28">
+<meta name="description" content="생각을 마음대로 펼치는 마인드맵. 컴퓨터와 휴대폰에서 써요.">
+<title>생각펼치기</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ============ 첫 화면: 내 마인드맵 ============ -->
+<section id="home" class="screen">
+  <header class="home-head">
+    <div class="brand"><img src="icons/icon-192.png" alt=""><b>생각펼치기</b></div>
+    <div class="home-actions">
+      <button class="primary" id="hNew">＋ 새 마인드맵</button>
+      <label class="btn">파일 열기<input type="file" id="hOpen" accept=".json,.md,.txt" hidden></label>
+    </div>
+  </header>
+  <main class="home-body">
+    <h2>새로 시작하기</h2>
+    <div id="tplRow" class="tpl-grid small"></div>
+    <h2>내 마인드맵 <span id="mapCount" class="muted"></span></h2>
+    <div id="mapList" class="map-grid"></div>
+    <p id="emptyMsg" class="muted" hidden>아직 만든 마인드맵이 없어요. 위에서 틀을 하나 골라 시작해 보세요.</p>
+    <p class="muted foot">마인드맵은 이 기기 안에만 저장돼요. 다른 기기로 옮기려면 마인드맵 안에서 「내보내기 → 백업 파일」로 저장한 뒤, 다른 기기에서 「파일 열기」를 누르세요.</p>
+  </main>
+</section>
+
+<!-- ============ 마인드맵 화면 ============ -->
+<section id="editor" class="screen" hidden>
+  <header class="top">
+    <button id="bBack" class="icon" title="목록으로">←</button>
+    <input id="title" class="title" maxlength="60" placeholder="제목" aria-label="마인드맵 제목">
+    <select id="selLayout" title="형식" aria-label="형식"></select>
+    <select id="selTheme" title="색 테마" aria-label="색 테마"></select>
+    <div class="seg" role="group" aria-label="보기">
+      <button id="vMap" class="on">지도</button><button id="vList">목록</button>
+    </div>
+    <button id="bFocus" title="고른 가지만 밝게">집중</button>
+    <button id="bPresent" title="가지를 하나씩 펼치며 보여 주기">발표</button>
+    <div class="menu">
+      <button id="bExport">내보내기 ▾</button>
+      <div id="exportMenu" class="menu-pop" hidden>
+        <button data-ex="png">그림 (PNG)</button>
+        <button data-ex="pdf">PDF</button>
+        <button data-ex="md">글 목록 (.md)</button>
+        <button data-ex="json">백업 파일 (다른 기기로 옮길 때)</button>
+      </div>
+    </div>
+    <span id="status" class="muted"></span>
+  </header>
+
+  <nav class="tools">
+    <button class="primary" id="tChild" title="Tab">＋ 아래 가지</button>
+    <button class="primary" id="tSib" title="Enter">＋ 옆 가지</button>
+    <button id="tDel" title="Delete">지우기</button>
+    <span class="sep"></span>
+    <button id="tUndo" title="Ctrl+Z">되돌리기</button>
+    <button id="tRedo" title="Ctrl+Y">다시</button>
+    <span class="sep"></span>
+    <button id="tOut" class="hide-sm" title="작게">－</button>
+    <button id="tIn" class="hide-sm" title="크게">＋</button>
+    <button id="tFit" title="화면에 맞추기">맞추기</button>
+    <span class="sep"></span>
+    <button id="tPanel" title="색·모양·아이콘·메모·그림">꾸미기</button>
+  </nav>
+  <div class="hint">
+    글자를 <b>누르면 바로 적어요</b> · <kbd>Enter</kbd> 다 적음 → 한 번 더 <kbd>Enter</kbd> 옆 가지 · <kbd>Tab</kbd> 아래 가지 ·
+    <kbd>Shift</kbd>+<kbd>Enter</kbd> 줄 바꿈 · 가지를 <b>끌어</b> 다른 가지 위에 놓으면 옮겨져요 · 빈 곳 끌기 = 화면 옮기기 · 휠 = 크게/작게
+  </div>
+
+  <div class="work">
+    <div id="stage">
+      <svg id="svg" aria-label="마인드맵"><g id="view"><g id="gE"></g><g id="gN"></g><g id="gU"></g></g></svg>
+      <textarea id="edit" rows="1" spellcheck="false" aria-label="가지 글"></textarea>
+      <div id="ghost" hidden></div>
+      <div id="presentBar" hidden>
+        <button id="pPrev">◀</button><span id="pCount"></span><button id="pNext">▶</button><button id="pEnd">끝내기</button>
+      </div>
+    </div>
+    <div id="outline" hidden></div>
+
+    <aside id="panel" hidden>
+      <div class="panel-head"><b>꾸미기</b><span id="pTarget" class="muted"></span><button id="pClose" class="icon" title="닫기">✕</button></div>
+      <p id="pNone" class="muted">가지를 하나 누르면 꾸밀 수 있어요.</p>
+      <div id="pBody">
+        <h4>색</h4><div id="pColors" class="swatches"></div>
+        <h4>모양</h4><div id="pShapes" class="chips"></div>
+        <h4>아이콘</h4><div id="pIcons" class="icons"></div>
+        <h4>메모</h4><textarea id="pNote" rows="4" aria-label="메모" placeholder="이 가지에 붙일 긴 설명을 적어요"></textarea>
+        <h4>그림</h4>
+        <div class="row">
+          <label class="btn">그림 넣기<input type="file" id="pImg" accept="image/*" hidden></label>
+          <button id="pImgDel">그림 빼기</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ 틀 고르기 창 ============ -->
+<dialog id="tplDlg">
+  <div class="dlg-head"><b>어떤 형식으로 시작할까요?</b><button class="icon" id="tplClose" title="닫기">✕</button></div>
+  <div id="tplGrid" class="tpl-grid"></div>
+</dialog>
+
+<div id="toast" role="status"></div>
+
+<script src="layout.js"></script>
+<script src="templates.js"></script>
+<script src="export.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
