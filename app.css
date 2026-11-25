@@ -14,6 +14,7 @@ body{overflow:hidden}
 button,.btn,select{font:inherit;font-size:14px;min-height:36px;padding:6px 11px;border:1px solid var(--line);border-radius:9px;
   background:var(--btn);color:var(--fg);cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
 button:disabled{opacity:.4;cursor:default}
+button[hidden]{display:none}
 button.primary,.btn.primary{background:var(--primary);color:var(--primaryFg);border-color:var(--primary)}
 button.icon{min-width:36px;justify-content:center;padding:6px}
 button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}

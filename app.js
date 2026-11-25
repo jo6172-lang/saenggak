@@ -47,15 +47,20 @@ function pushUndo(s) { undoS.push(s ?? snap()); if (undoS.length > 200) undoS.sh
 function restoreSnap(s) { const o = JSON.parse(s); cur.root = fixTree(o.root); cur.layout = o.layout; cur.theme = o.theme; if (selId && !findNode(cur.root, selId)) selId = null; syncSelects(); }
 
 /* ================= 저장 ================= */
+const record = () => ({ id: cur.id, title: cur.title, layout: cur.layout, theme: cur.theme, created: cur.created, updated: cur.updated, root: stripTemp(cur.root) });
+function showSaved() {
+  if (!Store.db) { $('#status').textContent = '저장 안 됨 (백업 파일로 저장하세요)'; return; }
+  $('#status').textContent = Sync.user ? (Sync.online ? '☁ 저장·공유됨' : '저장됨 · 인터넷이 되면 공유') : '저장됨';
+}
 let saveT = null;
 function save() {
   if (!cur) return;
   clearTimeout(saveT);
   $('#status').textContent = '저장 중…';
   saveT = setTimeout(async () => {
+    saveT = null;
     cur.updated = Date.now();
-    try { await Store.put({ id: cur.id, title: cur.title, layout: cur.layout, theme: cur.theme, created: cur.created, updated: cur.updated, root: stripTemp(cur.root) });
-      $('#status').textContent = Store.db ? '저장됨' : '저장 안 됨 (백업 파일로 저장하세요)'; }
+    try { const rec = record(); await Store.put(rec); Sync.push(rec); showSaved(); }
     catch (e) { $('#status').textContent = '저장 실패'; toast('저장하지 못했어요. 「내보내기 → 백업 파일」로 저장해 두세요.'); }
   }, 300);
 }
@@ -509,14 +514,14 @@ async function renderHome() {
 }
 $('#mapList').addEventListener('click', async e => {
   const del = e.target.closest('[data-del]'), cp = e.target.closest('[data-copy]'), op = e.target.closest('[data-open]');
-  if (del) { e.stopPropagation(); const m = await Store.get(del.dataset.del); if (m && confirm(`「${m.title || m.root.text}」을(를) 지울까요?\n지운 뒤에는 되살릴 수 없어요.`)) { await Store.del(m.id); renderHome(); toast('지웠어요'); } return; }
-  if (cp) { e.stopPropagation(); const m = await Store.get(cp.dataset.copy); if (m) { const c = JSON.parse(JSON.stringify(m)); c.id = 'm' + Date.now().toString(36); c.title = (m.title || m.root.text) + ' (복사본)'; c.created = c.updated = Date.now(); await Store.put(c); renderHome(); toast('복사본을 만들었어요'); } return; }
+  if (del) { e.stopPropagation(); const m = await Store.get(del.dataset.del); if (m && confirm(`「${m.title || m.root.text}」을(를) 지울까요?\n지운 뒤에는 되살릴 수 없어요.`)) { await Store.del(m.id); Sync.remove(m.id); renderHome(); toast('지웠어요'); } return; }
+  if (cp) { e.stopPropagation(); const m = await Store.get(cp.dataset.copy); if (m) { const c = JSON.parse(JSON.stringify(m)); c.id = 'm' + Date.now().toString(36); c.title = (m.title || m.root.text) + ' (복사본)'; c.created = c.updated = Date.now(); await Store.put(c); Sync.push(c, true); renderHome(); toast('복사본을 만들었어요'); } return; }
   if (op) openMap(await Store.get(op.dataset.open));
 });
 $('#mapList').addEventListener('keydown', async e => { if (e.key === 'Enter' && e.target.dataset.open) openMap(await Store.get(e.target.dataset.open)); });
 async function newFromTemplate(id) {
   const t = TEMPLATES.find(x => x.id === id); if (!t) return;
-  const m = templateMap(t); await Store.put(m); $('#tplDlg').open && $('#tplDlg').close(); openMap(m, true);
+  const m = templateMap(t); await Store.put(m); Sync.push(m, true); $('#tplDlg').open && $('#tplDlg').close(); openMap(m, true);
 }
 $('#tplRow').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (b) newFromTemplate(b.dataset.tpl); });
 $('#tplGrid').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (b) newFromTemplate(b.dataset.tpl); });
@@ -528,7 +533,7 @@ $('#hOpen').addEventListener('change', async e => {
   try { const j = JSON.parse(txt); const r = j.root || j; if (typeof r.text !== 'string') throw 0;
         m = { id: 'm' + Date.now().toString(36), title: j.title || '', layout: LAYOUTS[j.layout] ? j.layout : 'mind', theme: THEMES[j.theme] ? j.theme : 'bright', root: fixTree(r) }; }
   catch (_) { m = { id: 'm' + Date.now().toString(36), title: file.name.replace(/\.[^.]+$/, ''), layout: 'mind', theme: 'bright', root: fixTree(mdToTree(txt, mk)) }; }
-  m.created = m.updated = Date.now(); await Store.put(m); openMap(m); toast('파일을 열었어요');
+  m.created = m.updated = Date.now(); await Store.put(m); Sync.push(m, true); openMap(m); toast('파일을 열었어요');
 });
 
 function openMap(m, fresh) {
@@ -541,14 +546,55 @@ function openMap(m, fresh) {
   requestAnimationFrame(() => { render(); fitTo(null, false); if (fresh) { selId = cur.root.id; render(); } });
   $('#status').textContent = '';
 }
-async function goHome(fromPop) {
-  if (editing) commit();
-  if (cur) { clearTimeout(saveT); cur.updated = Date.now(); try { await Store.put({ id: cur.id, title: cur.title, layout: cur.layout, theme: cur.theme, created: cur.created, updated: cur.updated, root: stripTemp(cur.root) }); } catch (_) {} }
+async function goHome(fromPop, skipSave) {
+  if (editing && !skipSave) commit();
+  if (cur && !skipSave && saveT) { clearTimeout(saveT); saveT = null; cur.updated = Date.now(); try { const rec = record(); await Store.put(rec); Sync.push(rec, true); } catch (_) {} }
   if (present) stopPresent();
   cur = null; $('#editor').hidden = true; $('#home').hidden = false;
   if (!fromPop && history.state && history.state.map) history.replaceState(null, '', location.pathname);
   renderHome();
 }
+
+/* ================= 기기 사이 공유 ================= */
+let homeT = null;
+const renderHomeSoon = () => { clearTimeout(homeT); homeT = setTimeout(() => { if (!$('#home').hidden) renderHome(); }, 250); };
+const busyTyping = () => { const a = document.activeElement; return editing || drag || (a && (a.closest('#outline') || a.id === 'pNote' || a.id === 'title')); };
+Sync.onRemote = (m, fromOther) => {
+  if (cur && cur.id === m.id) {
+    if (!fromOther || busyTyping() || present || m.updated <= (cur.updated || 0)) return;
+    if (saveT) return;   // 이 기기에서 막 고친 것이 아직 저장 전이면 이 기기 것을 남긴다
+    cur.title = m.title; cur.layout = m.layout; cur.theme = m.theme; cur.updated = m.updated; cur.root = fixTree(m.root);
+    if (selId && !findNode(cur.root, selId)) selId = null;
+    syncSelects(); $('#title').value = cur.title || ''; refresh();
+    toast('다른 기기에서 고친 내용을 불러왔어요');
+  } else renderHomeSoon();
+};
+Sync.onRemoteDelete = id => {
+  if (cur && cur.id === id) { toast('다른 기기에서 이 마인드맵을 지웠어요'); goHome(false, true); }
+  else renderHomeSoon();
+};
+Sync.onState = msg => {
+  const b = $('#hSync');
+  b.hidden = !Sync.ready;
+  if (Sync.ready) b.textContent = Sync.user ? '☁ 공유 중' : '☁ 기기 사이 공유 켜기';
+  b.title = Sync.user ? Sync.user.email + ' 로 로그인됨 · 누르면 로그아웃' : '구글 계정으로 로그인하면 컴퓨터와 휴대폰에 자동으로 같이 저장돼요';
+  b.classList.toggle('on', !!Sync.user);
+  $('#footNote').textContent = !Sync.ready
+    ? '마인드맵은 이 기기 안에 저장돼요. 다른 기기로 옮기려면 「내보내기 → 백업 파일」로 저장한 뒤 다른 기기에서 「파일 열기」를 누르세요.'
+    : Sync.user
+      ? '☁ ' + Sync.user.email + ' 계정으로 컴퓨터와 휴대폰에 자동으로 함께 저장돼요. 같은 마인드맵을 두 곳에서 동시에 고치면 나중에 저장한 쪽이 남아요.' + (Sync.online ? '' : ' 지금은 인터넷이 끊겨 있어요. 연결되면 맞춰져요.')
+      : '지금은 이 기기 안에만 저장돼요. 위의 「☁ 기기 사이 공유 켜기」를 누르고 구글 계정으로 로그인하면 컴퓨터와 휴대폰이 자동으로 같은 마인드맵을 보여 줘요.';
+  if (cur) showSaved();
+  if (typeof msg === 'string') toast(msg);
+  if (Sync.user) renderHomeSoon();
+};
+$('#hSync').onclick = async () => {
+  if (Sync.user) {
+    if (confirm(Sync.user.email + ' 에서 로그아웃할까요?\n이 기기의 마인드맵은 그대로 남지만 더는 자동으로 공유되지 않아요.')) { await Sync.signOut(); toast('로그아웃했어요'); }
+    return;
+  }
+  try { await Sync.signIn(); } catch (e) { toast('로그인하지 못했어요: ' + (e.code || e.message)); }
+};
 
 /* ================= 시작 ================= */
 (async function init() {
@@ -556,7 +602,7 @@ async function goHome(fromPop) {
   if (!Store.db) toast('이 브라우저에서는 저장이 안 돼요. 백업 파일로 저장해 주세요.');
   if (history.state && history.state.map) history.replaceState(null, '', location.pathname);
   $('#tplRow').innerHTML = tplCards(true);
-  renderHome();
+  renderHome(); Sync.onState();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }

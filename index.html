@@ -18,6 +18,7 @@
   <header class="home-head">
     <div class="brand"><img src="icons/icon-192.png" alt=""><b>생각펼치기</b></div>
     <div class="home-actions">
+      <button id="hSync" hidden></button>
       <button class="primary" id="hNew">＋ 새 마인드맵</button>
       <label class="btn">파일 열기<input type="file" id="hOpen" accept=".json,.md,.txt" hidden></label>
     </div>
@@ -28,7 +29,7 @@
     <h2>내 마인드맵 <span id="mapCount" class="muted"></span></h2>
     <div id="mapList" class="map-grid"></div>
     <p id="emptyMsg" class="muted" hidden>아직 만든 마인드맵이 없어요. 위에서 틀을 하나 골라 시작해 보세요.</p>
-    <p class="muted foot">마인드맵은 이 기기 안에만 저장돼요. 다른 기기로 옮기려면 마인드맵 안에서 「내보내기 → 백업 파일」로 저장한 뒤, 다른 기기에서 「파일 열기」를 누르세요.</p>
+    <p class="muted foot" id="footNote">마인드맵은 이 기기 안에 저장돼요.</p>
   </main>
 </section>
 
@@ -115,6 +116,12 @@
 <script src="layout.js"></script>
 <script src="templates.js"></script>
 <script src="export.js"></script>
+<script src="config.js"></script>
+<script src="sync.js"></script>
 <script src="app.js"></script>
+<script>
+  if (new URLSearchParams(location.search).get('fakesync')) { const s = document.createElement('script'); s.src = 'tests/fake-backend.js'; document.body.appendChild(s); }
+  else if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) import('./firebase-backend.js').catch(() => Sync.onState && Sync.onState('공유 기능을 불러오지 못했어요 (인터넷 연결 확인)'));
+</script>
 </body>
 </html>
