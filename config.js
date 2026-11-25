@@ -1,4 +1,11 @@
 /* 파이어베이스 웹 앱 설정. 파이어베이스 화면 → 프로젝트 설정 → 내 앱 → SDK 설정 및 구성 의 값을 넣는다.
    이 값들은 비밀번호가 아니라 앱을 가리키는 이름표다(공개되어도 됨). 지키는 일은 보안 규칙(firestore.rules)이 한다.
    비어 있으면 동기화 없이 기기 안에만 저장한다. */
-window.FIREBASE_CONFIG = null;
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD18cPjBIHDibw03IUrU1t9y5yBVmjW6W0",
+  authDomain: "saenggak-48f47.firebaseapp.com",
+  projectId: "saenggak-48f47",
+  storageBucket: "saenggak-48f47.firebasestorage.app",
+  messagingSenderId: "575606031805",
+  appId: "1:575606031805:web:6be1b4082e0d9ec4373ed4"
+};
