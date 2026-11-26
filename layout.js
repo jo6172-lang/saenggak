@@ -23,6 +23,7 @@ const LAYOUTS = {
   tree: '나무 목록 (아래로)',
   timeline: '타임라인 (옆으로)',
   bubble: '버블 (둥글게)',
+  free: '자유 캔버스 (마음대로)',
 };
 
 const SHAPES = { auto: '자동', round: '둥근 상자', box: '네모', pill: '알약', circle: '동그라미', line: '밑줄', plain: '글자만' };
@@ -58,6 +59,7 @@ function styleFor(d) {
 }
 function defaultShape(layout, d) {
   if (layout === 'bubble') return 'circle';
+  if (layout === 'free') return 'round';
   if (d <= 1) return 'round';
   if (layout === 'mind' || layout === 'right') return 'line';
   if (layout === 'tree') return 'plain';
@@ -192,6 +194,37 @@ function layoutBubble(root) {
   place(root, -Math.PI / 2, Math.PI * 1.5, 0);
 }
 
+/* 자유 캔버스: 가지마다 자기 자리(fx, fy = 가운데 점)를 기억한다.
+   자리가 없는 가지만 버블 모양을 본떠 부모 옆 빈 곳에 놓고, 그 자리를 저장한다. */
+function layoutFree(root) {
+  const cx = n => n._x + n._w / 2, cy = n => n._y + n._h / 2;
+  layoutBubble(root);
+  const auto = new Map();
+  walk(root, n => { if (n._vis) auto.set(n.id, { x: cx(n), y: cy(n) }); });
+  const placed = [];
+  const hits = (n, x, y) => placed.some(m => Math.abs(m.x - x) < (m.w + n._w) / 2 + 10 && Math.abs(m.y - y) < (m.h + n._h) / 2 + 8);
+  const put = (n, p) => {
+    if (!p) { n.fx = 0; n.fy = 0; }
+    else if (typeof n.fx !== 'number' || typeof n.fy !== 'number') {
+      const a0 = auto.get(n.id), ap = auto.get(p.id);
+      const dx = a0.x - ap.x, dy = a0.y - ap.y;
+      let ang = Math.atan2(dy, dx), r = Math.max(Math.hypot(dx, dy), (p._w + n._w) / 2 + 40);
+      let x = p.fx + Math.cos(ang) * r, y = p.fy + Math.sin(ang) * r;
+      for (let i = 1; i < 24 && hits(n, x, y); i++) {
+        ang += (i % 2 ? 1 : -1) * i * 0.32; if (i % 8 === 0) r += 50;
+        x = p.fx + Math.cos(ang) * r; y = p.fy + Math.sin(ang) * r;
+      }
+      n.fx = Math.round(x); n.fy = Math.round(y);
+    }
+    n._x = n.fx - n._w / 2; n._y = n.fy - n._h / 2;
+    placed.push({ x: n.fx, y: n.fy, w: n._w, h: n._h });
+    if (p) { const a = Math.atan2(n.fy - p.fy, n.fx - p.fx); n._ang = a; n._side = Math.cos(a) >= 0 ? 1 : -1; }
+    else { n._ang = 0; n._side = 1; }
+    shown(n).forEach(c => put(c, n));
+  };
+  put(root, null);
+}
+
 function doLayout(map, theme) {
   const root = map.root;
   prepare(root, map.layout, theme);
@@ -201,6 +234,7 @@ function doLayout(map, theme) {
     case 'tree': layoutTree(root); break;
     case 'timeline': layoutTimeline(root); break;
     case 'bubble': layoutBubble(root); break;
+    case 'free': layoutFree(root); break;
     default: layoutMind(root, false);
   }
 }
@@ -223,7 +257,7 @@ function edgePath(layout, p, c, prevSib) {
       if (p._d === 1) { const px = p._x + 18, py = up ? p._y : p._y + p._h; return `M${px},${py} V${y} H${c._x}`; }
       const px = p._x + 14, py = up ? p._y : p._y + p._h; return `M${px},${py} V${y} H${c._x}`;
     }
-    case 'bubble': return `M${cxm(p)},${cym(p)} L${cxm(c)},${cym(c)}`;
+    case 'bubble': case 'free': return `M${cxm(p)},${cym(p)} L${cxm(c)},${cym(c)}`;
     case 'right': {
       const px = p._x + p._w, py = p._d === 0 ? cym(p) : anchorY(p), x = c._x, y = anchorY(c), mx = px + Math.min(22, (x - px) / 2);
       return `M${px},${py} H${mx} V${y} H${x}`;
@@ -239,7 +273,7 @@ function edgePath(layout, p, c, prevSib) {
 
 /* 접기 단추 자리 (선이 나가는 쪽) */
 function foldPoint(layout, n) {
-  if (layout === 'bubble') { const a = n._ang || 0, r = n._w / 2 + 2; return { x: n._x + n._w / 2 + Math.cos(a) * r, y: n._y + n._h / 2 + Math.sin(a) * r, dx: Math.cos(a), dy: Math.sin(a) }; }
+  if (layout === 'bubble' || layout === 'free') { const a = n._ang || 0, r = n._w / 2 + 2; return { x: n._x + n._w / 2 + Math.cos(a) * r, y: n._y + n._h / 2 + Math.sin(a) * r, dx: Math.cos(a), dy: Math.sin(a) }; }
   if (layout === 'org') return { x: n._x + n._w / 2, y: n._y + n._h + 9, dx: 0, dy: 1 };
   if (layout === 'tree' || (layout === 'timeline' && n._d >= 1)) {
     const up = layout === 'timeline' && (n._up || n._tl < 0) && !(n._d === 1 && n._tl > 0);
@@ -290,7 +324,7 @@ function renderSVG(map, theme, opt = {}) {
         if (shape === 'box' && !solid) g += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${color}" fill-opacity="0.08"/>`;
       }
     }
-    const center = shape === 'circle' || layout === 'org' || layout === 'bubble';
+    const center = shape === 'circle' || layout === 'org' || layout === 'bubble' || layout === 'free';
     const cw = Math.max(n._textW + (n.note ? 20 : 0), n._iw);
     let cy = y + (h - (n._lines.length * n._lh + (n._iw ? n._ih + 6 : 0))) / 2;
     if (n._iw) {
@@ -316,7 +350,7 @@ function renderSVG(map, theme, opt = {}) {
         const r = shape === 'circle' ? `<circle cx="${x + w / 2}" cy="${y + h / 2}" r="${w / 2 + 6}"` : `<rect x="${x - 5}" y="${y - 5}" width="${w + 10}" height="${h + 10}" rx="10"`;
         U += `${r} fill="none" stroke="${opt.sel}" stroke-width="2.5" stroke-dasharray="${opt.editing === n.id ? '0' : '6 4'}"/>`;
       }
-      if (d > 0 && n.children.length && layout !== 'bubble') {
+      if (d > 0 && n.children.length && layout !== 'bubble' && layout !== 'free') {
         const f = foldPoint(layout, n);
         U += `<g data-act="toggle" data-id="${n.id}"><circle cx="${f.x}" cy="${f.y}" r="8.5" fill="${n.collapsed ? color : theme.bg}" stroke="${color}" stroke-width="2"/>`;
         U += n.collapsed ? `<text x="${f.x}" y="${f.y + 4}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff" font-family='${FONT}'>${n.children.length}</text>`
@@ -325,7 +359,7 @@ function renderSVG(map, theme, opt = {}) {
       }
       if (opt.selId === n.id && opt.editing !== n.id) {
         const f = d === 0 && layout !== 'org' && layout !== 'tree' && layout !== 'timeline' ? { x: x + w + 6, y: y + h / 2, dx: 1, dy: 0 } : foldPoint(layout, n);
-        const off = (d > 0 && n.children.length && layout !== 'bubble') ? 22 : 10;
+        const off = (d > 0 && n.children.length && layout !== 'bubble' && layout !== 'free') ? 22 : 10;
         const ax = f.x + f.dx * off, ay = f.y + f.dy * off;
         U += `<g data-act="add" data-id="${n.id}"><title>아래 가지 더하기 (Tab)</title><circle cx="${ax}" cy="${ay}" r="12" fill="${opt.sel}"/><path d="M${ax - 5.5},${ay} H${ax + 5.5} M${ax},${ay - 5.5} V${ay + 5.5}" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>`;
       }

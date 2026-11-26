@@ -1,6 +1,8 @@
 'use strict';
 /* 생각펼치기 — 시작 틀(템플릿). 내용은 모두 새로 쓴 예시 글이다. */
 const TEMPLATES = [
+  { id: 'me', name: '나로 시작', desc: '가운데 「나」 하나. 가지를 아무 데나 끌어 놓고, 빈 곳을 두 번 눌러 생각을 더해요', layout: 'free', theme: 'bright',
+    md: `# 나` },
   { id: 'blank', name: '빈 마인드맵', desc: '가운데 주제에서 생각을 자유롭게 펼쳐요', layout: 'mind', theme: 'bright',
     md: `# 가운데 주제\n## 생각 1\n## 생각 2\n## 생각 3\n## 생각 4` },
   { id: 'brainstorm', name: '버블 브레인스토밍', desc: '떠오르는 대로 둥글게 늘어놓아요', layout: 'bubble', theme: 'pastel',

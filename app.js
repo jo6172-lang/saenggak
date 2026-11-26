@@ -112,7 +112,7 @@ function startEdit(id, isNew = false) {
 function placeEditor() {
   if (!editing) { ed.style.display = 'none'; return; }
   const f = findNode(cur.root, editing); if (!f || f.n._x === undefined) return;
-  const n = f.n, s = n._s, k = view.k, center = n._shape === 'circle' || cur.layout === 'org' || cur.layout === 'bubble';
+  const n = f.n, s = n._s, k = view.k, center = n._shape === 'circle' || cur.layout === 'org' || cur.layout === 'bubble' || cur.layout === 'free';
   const w = Math.max(n._w, 150), x = center ? n._x + n._w / 2 - w / 2 : n._x;
   ed.style.left = (x * k + view.tx - 2) + 'px';
   ed.style.top = (n._y * k + view.ty - 2) + 'px';
@@ -249,11 +249,20 @@ svg.addEventListener('pointermove', e => {
     if (down.act === 'node' && !present && down.id !== cur.root.id) {
       if (editing) commit();
       const f = findNode(cur.root, down.id);
-      if (f) { drag = { id: down.id, node: f.n, target: null }; const g = $('#ghost'); g.textContent = f.n.text || '(빈 가지)'; g.hidden = false; }
+      if (f && cur.layout === 'free') {
+        // 자유 캔버스: 가지(와 그 아래 가지들)를 손가락·마우스를 따라 그대로 옮긴다
+        pushUndo(); const orig = []; walk(f.n, m => { if (typeof m.fx === 'number') orig.push([m, m.fx, m.fy]); });
+        drag = { id: down.id, node: f.n, target: null, free: true, start: toMap(down.x, down.y), orig };
+      } else if (f) { drag = { id: down.id, node: f.n, target: null }; const g = $('#ghost'); g.textContent = f.n.text || '(빈 가지)'; g.hidden = false; }
     } else svg.classList.add('panning');
   }
   if (!down.moved) return;
-  if (drag) {
+  if (drag && drag.free) {
+    const p = toMap(e.clientX, e.clientY), mx = p.x - drag.start.x, my = p.y - drag.start.y;
+    for (const [m, x0, y0] of drag.orig) { m.fx = Math.round(x0 + mx); m.fy = Math.round(y0 + my); }
+    const hit = nodeAt(p.x, p.y, drag.node); drag.target = hit ? hit.id : null;
+    render();
+  } else if (drag) {
     const r = stage.getBoundingClientRect(), g = $('#ghost');
     g.style.left = (e.clientX - r.left + 12) + 'px'; g.style.top = (e.clientY - r.top + 12) + 'px';
     const p = toMap(e.clientX, e.clientY), hit = nodeAt(p.x, p.y, drag.node);
@@ -268,6 +277,16 @@ function endPointer(e) {
   const d = down; down = null; if (!d) return;
   if (drag) {
     const dr = drag; drag = null; $('#ghost').hidden = true;
+    if (dr.free) {
+      // 다른 가지 위에 놓으면 그 가지 아래로 들어가고, 빈 곳에 놓으면 그 자리에 머문다
+      const f = findNode(cur.root, dr.id), t = dr.target && findNode(cur.root, dr.target);
+      if (f && t && f.p && f.n !== t.n && !isAncestor(f.n, t.n) && f.p !== t.n) {
+        f.p.children.splice(f.p.children.indexOf(f.n), 1); t.n.children.push(f.n); t.n.collapsed = false;
+        const ox = t.n.fx + 150 - f.n.fx, oy = t.n.fy - f.n.fy;   // 새 부모 오른쪽 옆으로
+        walk(f.n, m => { if (typeof m.fx === 'number') { m.fx += ox; m.fy += oy; } });
+      }
+      selId = dr.id; render(); save(); return;
+    }
     if (dr.target) { if (!moveNode(dr.id, dr.target)) render(); }
     else {
       // 마인드맵에서 큰 가지를 반대쪽으로 끌면 옆을 바꾼다
@@ -283,7 +302,25 @@ function endPointer(e) {
   else if (d.act === 'toggle') { if (editing) commit(); toggleFold(d.id); }
   else if (d.act === 'add') { if (editing) commit(); addChild(d.id); }
   else if (d.act === 'note') { if (editing) commit(); selId = d.id; openPanel(true); render(); setTimeout(() => $('#pNote').focus(), 50); }
-  else { if (editing) commit(); selId = null; render(); }
+  else {
+    if (editing) commit();
+    // 자유 캔버스: 빈 곳을 두 번 누르면 그 자리에 새 가지 (가장 가까운 가지에 이어짐)
+    if (cur.layout === 'free' && !d.act) {
+      const now = Date.now();
+      if (lastTap && now - lastTap.t < 450 && Math.hypot(d.x - lastTap.x, d.y - lastTap.y) < 30) {
+        lastTap = null; const p = toMap(d.x, d.y); addAt(p.x, p.y); return;
+      }
+      lastTap = { t: now, x: d.x, y: d.y };
+    }
+    selId = null; render();
+  }
+}
+let lastTap = null;
+function addAt(x, y) {
+  let best = cur.root, bd = Infinity;
+  walk(cur.root, n => { if (!n._vis) return; const dd = Math.hypot(n._x + n._w / 2 - x, n._y + n._h / 2 - y); if (dd < bd) { bd = dd; best = n; } });
+  pushUndo(); const c = mk(''); c.fx = Math.round(x); c.fy = Math.round(y);
+  best.children.push(c); best.collapsed = false; startEdit(c.id, true);
 }
 svg.addEventListener('pointerup', endPointer);
 svg.addEventListener('pointercancel', endPointer);
@@ -455,10 +492,10 @@ $('#pImgDel').onclick = () => { const f = findNode(cur.root, selId); if (!f || !
 $('#pClose').onclick = () => openPanel(false);
 
 /* ================= 위쪽 단추 ================= */
-function syncSelects() { $('#selLayout').value = cur.layout; $('#selTheme').value = cur.theme; }
+function syncSelects() { $('#selLayout').value = cur.layout; $('#selTheme').value = cur.theme; document.body.classList.toggle('is-free', cur.layout === 'free'); }
 $('#selLayout').innerHTML = Object.entries(LAYOUTS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
 $('#selTheme').innerHTML = Object.entries(THEMES).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
-$('#selLayout').onchange = e => { if (editing) commit(); pushUndo(); cur.layout = e.target.value; render(); fitTo(null, true); save(); };
+$('#selLayout').onchange = e => { if (editing) commit(); pushUndo(); cur.layout = e.target.value; syncSelects(); render(); fitTo(null, true); save(); };
 $('#selTheme').onchange = e => { if (editing) commit(); pushUndo(); cur.theme = e.target.value; render(); save(); };
 $('#title').addEventListener('input', e => { cur.title = e.target.value; save(); });
 $('#vMap').onclick = () => setMode('map');

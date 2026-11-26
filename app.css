@@ -133,3 +133,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   .icons{grid-template-columns:repeat(10,1fr)}
   .menu-pop{right:auto;left:0}
 }
+
+/* 자유 캔버스일 때만 보이는 도움말 */
+.hint .h-free{display:none}
+body.is-free .hint .h-free{display:inline}
+body.is-free .hint .h-tree{display:none}

@@ -1,5 +1,5 @@
 /* 생각펼치기 — 끊겨도 열리게 파일을 담아 둔다. 판을 바꾸면 이름(v)을 올린다. */
-const CACHE = 'saenggak-v2';
+const CACHE = 'saenggak-v3';
 const FILES = ['./', 'index.html', 'app.css', 'app.js', 'layout.js', 'templates.js', 'export.js', 'sync.js', 'config.js', 'firebase-backend.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'favicon.ico'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
